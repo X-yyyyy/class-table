@@ -15,11 +15,12 @@ export const useTimeSlotStore = defineStore('timeSlot', () => {
   function fetchTimeSlots() {
     const auth = useAuthStore()
     if (!auth.user) return
+    const uid = auth.user.uid
     loading.value = true
     unsub?.()
-    unsub = subscribeTimeSlots(auth.user.uid, (list) => {
+    unsub = subscribeTimeSlots(uid, (list) => {
       if (list.length === 0) {
-        initDefaultSlots(auth.user.uid)
+        initDefaultSlots(uid)
       } else {
         timeSlots.value = list
         loading.value = false

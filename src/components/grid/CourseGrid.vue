@@ -57,7 +57,7 @@ const daySlots = computed(() => {
       <TimeColumn :timeSlots="daySlots" />
 
       <!-- Empty cells for clicking to add -->
-      <template v-for="(slot, si) in daySlots" :key="'row-' + si">
+      <template v-for="(_slot, si) in daySlots" :key="'row-' + si">
         <div
           v-for="day in 7"
           :key="'cell-' + day + '-' + si"

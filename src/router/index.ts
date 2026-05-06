@@ -47,7 +47,7 @@ const router = createRouter({
   ],
 })
 
-function getCurrentUser(): Promise<ReturnType<typeof getAuth.currentUser>> {
+function getCurrentUser(): Promise<unknown> {
   return new Promise((resolve) => {
     const unsub = onAuthStateChanged(getAuth(), (user) => {
       unsub()
