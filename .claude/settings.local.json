@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\86157\\\\class-table\\\\src\" -Recurse -Name)",
+      "Bash(Sort-Object)",
+      "Bash(npx vue-tsc *)",
+      "PowerShell(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\86157\\\\class-table\\\\src\\\\views\" -Force)",
+      "PowerShell(New-Item -ItemType Directory -Path \"c:\\\\Users\\\\86157\\\\class-table\\\\src\\\\layouts\" -Force)",
+      "Bash(Select-String -Pattern \"error\" -SimpleMatch)",
+      "PowerShell(npx vue-tsc --noEmit 2>&1)",
+      "PowerShell(npx vue-tsc --noEmit 2>&1 | ForEach-Object { \"$_\" })",
+      "Bash(npx vite *)",
+      "Bash(Remove-Item -Path \"c:\\\\Users\\\\86157\\\\class-table\\\\src\\\\components\\\\HelloWorld.vue\" -Force)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\86157\\\\class-table\\\\src\" -Recurse -File)",
+      "Bash(Select-Object FullName)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\86157\\\\class-table\" -Recurse -Depth 1)",
+      "Bash(Select-Object FullName, Mode)"
+    ]
+  }
+}
