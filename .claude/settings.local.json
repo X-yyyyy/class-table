@@ -18,7 +18,8 @@
       "Bash(Select-String -Pattern \"getCurrentUser\" -Context 0,2)",
       "Bash(git hash-object *)",
       "WebFetch(domain:class-table-sigma.vercel.app)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(npm run *)"
     ]
   }
 }

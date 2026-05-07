@@ -34,6 +34,11 @@ body {
     );
 }
 
+body.has-custom-bg {
+  background: linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
+              var(--custom-bg) center / cover fixed no-repeat;
+}
+
 body::after {
   content: "";
   position: fixed;

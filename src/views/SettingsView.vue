@@ -9,6 +9,8 @@ import { ElMessage } from 'element-plus'
 
 const authStore = useAuthStore()
 const darkMode = ref(false)
+const backgroundImage = ref('')
+const particleEnabled = ref(false)
 
 function applyDarkMode(enabled: boolean) {
   document.documentElement.classList.toggle('dark', enabled)
@@ -27,6 +29,62 @@ async function toggleDarkMode(val: boolean) {
   }
 }
 
+function applyBackground(url: string) {
+  if (url) {
+    document.documentElement.style.setProperty('--custom-bg', `url(${JSON.stringify(url)})`)
+    document.body.classList.add('has-custom-bg')
+  } else {
+    document.documentElement.style.removeProperty('--custom-bg')
+    document.body.classList.remove('has-custom-bg')
+  }
+}
+
+function handleUpload(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = () => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      let w = img.width
+      let h = img.height
+      const max = 1920
+      if (w > max || h > max) {
+        const ratio = Math.min(max / w, max / h)
+        w = Math.round(w * ratio)
+        h = Math.round(h * ratio)
+      }
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0, w, h)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+      backgroundImage.value = dataUrl
+      localStorage.setItem('bgImage', dataUrl)
+      applyBackground(dataUrl)
+    }
+    img.src = reader.result as string
+  }
+  reader.readAsDataURL(file)
+  input.value = ''
+}
+
+function removeBackground() {
+  backgroundImage.value = ''
+  localStorage.removeItem('bgImage')
+  applyBackground('')
+  particleEnabled.value = false
+  localStorage.setItem('bgParticle', 'false')
+}
+
+function toggleParticle(val: boolean) {
+  particleEnabled.value = val
+  localStorage.setItem('bgParticle', val ? 'true' : 'false')
+}
+
 onMounted(async () => {
   if (authStore.user) {
     const snap = await getDoc(doc(db, 'users', authStore.user.uid))
@@ -34,6 +92,12 @@ onMounted(async () => {
       darkMode.value = !!snap.data()?.settings?.darkMode
     }
   }
+  const savedBg = localStorage.getItem('bgImage')
+  if (savedBg) {
+    backgroundImage.value = savedBg
+    applyBackground(savedBg)
+  }
+  particleEnabled.value = localStorage.getItem('bgParticle') === 'true'
 })
 </script>
 
@@ -48,6 +112,35 @@ onMounted(async () => {
         <span class="setting-label">深色模式</span>
         <el-switch :model-value="darkMode" @update:model-value="toggleDarkMode" />
       </div>
+    </div>
+    <div class="setting-section">
+      <h3>自定义背景</h3>
+      <div class="setting-row">
+        <el-upload :auto-upload="false" :show-file-list="false" accept="image/*" @change="handleUpload">
+          <template #trigger>
+            <el-button size="small" type="primary">选择图片</el-button>
+          </template>
+        </el-upload>
+        <el-button v-if="backgroundImage" size="small" type="danger" plain @click="removeBackground">
+          移除背景
+        </el-button>
+      </div>
+      <div v-if="backgroundImage" class="bg-preview-wrapper">
+        <img :src="backgroundImage" class="bg-preview" />
+      </div>
+      <p class="setting-hint">建议使用宽屏图片，最大 1920px，会自动压缩</p>
+    </div>
+    <div class="setting-section">
+      <h3>粒子效果</h3>
+      <div class="setting-row">
+        <span class="setting-label">粒子背景动画</span>
+        <el-switch
+          :model-value="particleEnabled"
+          :disabled="!backgroundImage"
+          @update:model-value="toggleParticle"
+        />
+      </div>
+      <p class="setting-hint">将背景图片转为粒子动画效果，需要先上传背景图片。性能较弱的设备建议关闭。</p>
     </div>
   </div>
 </template>
@@ -77,5 +170,22 @@ onMounted(async () => {
 .setting-label {
   font-size: 14px;
   color: var(--el-text-color-regular);
+}
+.bg-preview-wrapper {
+  margin-top: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--el-border-color);
+}
+.bg-preview {
+  display: block;
+  max-width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+}
+.setting-hint {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-top: 6px;
 }
 </style>
