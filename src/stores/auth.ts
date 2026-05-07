@@ -3,7 +3,8 @@ import { ref } from 'vue'
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
@@ -20,6 +21,23 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = () => !!user.value
 
   function init() {
+    getRedirectResult(auth).then(async (cred) => {
+      if (cred) {
+        const uid = cred.user.uid
+        const snap = await getDoc(doc(db, 'users', uid))
+        if (!snap.exists()) {
+          await setDoc(doc(db, 'users', uid), {
+            profile: { name: cred.user.displayName || '', email: cred.user.email, photoURL: cred.user.photoURL || '' },
+            settings: { themeColor: '#409EFF', darkMode: false, weekStartsOn: 1 },
+          })
+          await setDoc(doc(db, `users/${uid}/semester`, 'current'), {
+            name: '2025-2026学年第二学期',
+            startDate: new Date('2026-03-01'),
+            totalWeeks: 20,
+          })
+        }
+      }
+    }).catch(() => {})
     onAuthStateChanged(auth, (u) => {
       user.value = u
       loading.value = false
@@ -47,21 +65,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function loginWithGoogle() {
     const provider = new GoogleAuthProvider()
-    const cred = await signInWithPopup(auth, provider)
-    const uid = cred.user.uid
-    const snap = await getDoc(doc(db, 'users', uid))
-    if (!snap.exists()) {
-      await setDoc(doc(db, 'users', uid), {
-        profile: { name: cred.user.displayName || '', email: cred.user.email, photoURL: cred.user.photoURL || '' },
-        settings: { themeColor: '#409EFF', darkMode: false, weekStartsOn: 1 },
-      })
-      await setDoc(doc(db, `users/${uid}/semester`, 'current'), {
-        name: '2025-2026学年第二学期',
-        startDate: new Date('2026-03-01'),
-        totalWeeks: 20,
-      })
-    }
-    return cred
+    await signInWithRedirect(auth, provider)
   }
 
   async function resetPassword(email: string) {

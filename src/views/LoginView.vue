@@ -31,10 +31,8 @@ async function handleGoogleLogin() {
   loading.value = true
   try {
     await auth.loginWithGoogle()
-    router.push('/')
   } catch {
     ElMessage.error('Google 登录失败')
-  } finally {
     loading.value = false
   }
 }

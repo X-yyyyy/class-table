@@ -14,7 +14,11 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\86157\\\\class-table\\\\src\" -Recurse -File)",
       "Bash(Select-Object FullName)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\86157\\\\class-table\" -Recurse -Depth 1)",
-      "Bash(Select-Object FullName, Mode)"
+      "Bash(Select-Object FullName, Mode)",
+      "Bash(Select-String -Pattern \"getCurrentUser\" -Context 0,2)",
+      "Bash(git hash-object *)",
+      "WebFetch(domain:class-table-sigma.vercel.app)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }
