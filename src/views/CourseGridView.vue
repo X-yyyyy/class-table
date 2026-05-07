@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import type { Course } from '@/types'
 import CourseGrid from '@/components/grid/CourseGrid.vue'
 import CourseDialog from '@/components/CourseDialog.vue'
 import { useCourseStore } from '@/stores/course'
@@ -7,7 +8,7 @@ import { ElMessage } from 'element-plus'
 
 const courseStore = useCourseStore()
 const dialogVisible = ref(false)
-const editingCourse = ref<any>(null)
+const editingCourse = ref<Course | null>(null)
 const defaultDay = ref(1)
 const defaultSlot = ref(1)
 
@@ -21,12 +22,12 @@ function handleAddCourse(dayOfWeek: number, slotIndex: number) {
 function handleEditCourse(courseId: string) {
   const course = courseStore.courses.find((c) => c.id === courseId)
   if (course) {
-    editingCourse.value = { ...course }
+    editingCourse.value = JSON.parse(JSON.stringify(course))
     dialogVisible.value = true
   }
 }
 
-async function handleSave(data: any) {
+async function handleSave(data: Omit<Course, 'id'>) {
   try {
     if (editingCourse.value?.id) {
       await courseStore.updateCourse(editingCourse.value.id, data)

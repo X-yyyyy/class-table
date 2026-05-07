@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Course } from '@/types'
+import type { Course, Schedule } from '@/types'
 import { subscribeCourses, addCourse as fbAdd, updateCourse as fbUpdate, deleteCourse as fbDelete } from '@/utils/firestore'
 import { useAuthStore } from './auth'
 
@@ -43,17 +43,13 @@ export const useCourseStore = defineStore('course', () => {
     await fbDelete(auth.user.uid, courseId)
   }
 
-  function getCoursesForWeek(weekNum: number): Course[] {
-    return courses.value.filter((c) => {
-      return c.schedules.some((s) => {
-        if (s.weekType === 'all') return true
-        if (s.weekType === 'odd') return weekNum % 2 === 1
-        if (s.weekType === 'even') return weekNum % 2 === 0
-        if (s.weekType === 'custom') return s.customWeeks?.includes(weekNum) ?? false
-        return false
-      })
-    })
+  function isScheduleVisible(schedule: Schedule, weekNum: number) {
+    if (schedule.weekType === 'all') return true
+    if (schedule.weekType === 'odd') return weekNum % 2 === 1
+    if (schedule.weekType === 'even') return weekNum % 2 === 0
+    if (schedule.weekType === 'custom') return schedule.customWeeks?.includes(weekNum) ?? false
+    return false
   }
 
-  return { courses, loading, fetchCourses, stopListening, addCourse, updateCourse, deleteCourse, getCoursesForWeek }
+  return { courses, loading, fetchCourses, stopListening, addCourse, updateCourse, deleteCourse, isScheduleVisible }
 })

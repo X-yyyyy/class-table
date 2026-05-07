@@ -1,17 +1,26 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import ParticleBackground from '@/components/ParticleBackground.vue'
 
 const bgImage = ref('')
-const particleVisible = ref(false)
+const bgParticleEnabled = ref(false)
+
+function loadSettings() {
+  bgImage.value = localStorage.getItem('bgImage') || ''
+  bgParticleEnabled.value = localStorage.getItem('bgParticle') === 'true' && !!bgImage.value
+}
 
 onMounted(() => {
-  bgImage.value = localStorage.getItem('bgImage') || ''
-  particleVisible.value = localStorage.getItem('bgParticle') === 'true'
+  loadSettings()
+  window.addEventListener('settings-updated', loadSettings)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('settings-updated', loadSettings)
 })
 </script>
 
 <template>
-  <ParticleBackground :image-src="bgImage" :visible="particleVisible" />
   <router-view />
+  <ParticleBackground :image-url="bgImage" :enabled="bgParticleEnabled" />
 </template>

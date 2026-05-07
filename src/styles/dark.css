@@ -41,6 +41,15 @@ html.dark #app {
   color: var(--el-text-color-primary);
 }
 
+html.dark body.has-custom-bg {
+  background: linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
+              var(--custom-bg) center / cover fixed no-repeat;
+}
+
+html.dark body.has-custom-bg #app {
+  background: transparent;
+}
+
 html.dark .sidebar {
   background: var(--el-bg-color);
   border-right-color: var(--el-border-color);

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Course, Schedule } from '@/types'
 
 const props = defineProps<{
@@ -10,6 +11,14 @@ const props = defineProps<{
 const emit = defineEmits<{
   edit: [course: Course]
 }>()
+
+const weekText = computed(() => {
+  if (props.schedule.weekType === 'all') return '每周'
+  if (props.schedule.weekType === 'odd') return '单周'
+  if (props.schedule.weekType === 'even') return '双周'
+  const weeks = [...(props.schedule.customWeeks || [])].sort((a, b) => a - b)
+  return weeks.length ? `第${weeks.join('、')}周` : '自定义周'
+})
 
 function getGridPosition() {
   return {
@@ -32,6 +41,7 @@ function getGridPosition() {
     <div class="card-name" :style="{ color: course.color }">{{ course.name }}</div>
     <div class="card-info">{{ course.teacher }}</div>
     <div class="card-info">{{ course.location }}</div>
+    <div class="card-info week-text">{{ weekText }}</div>
   </div>
 </template>
 
@@ -61,5 +71,9 @@ function getGridPosition() {
   font-size: 11px;
   color: var(--el-text-color-regular);
   line-height: 1.3;
+}
+.week-text {
+  margin-top: 2px;
+  color: var(--el-text-color-secondary);
 }
 </style>

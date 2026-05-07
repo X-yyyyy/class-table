@@ -17,15 +17,13 @@ const emit = defineEmits<{
   editCourse: [courseId: string]
 }>()
 
-const visibleCourses = computed(() => {
-  return courseStore.getCoursesForWeek(semesterStore.currentWeek)
-})
-
 const scheduleEntries = computed(() => {
   const entries: Array<{ course: Course; schedule: Schedule; slotIndex: number }> = []
-  for (const course of visibleCourses.value) {
+  for (const course of courseStore.courses) {
     for (const schedule of course.schedules) {
-      entries.push({ course, schedule, slotIndex: schedule.startSlot - 1 })
+      if (courseStore.isScheduleVisible(schedule, semesterStore.currentWeek)) {
+        entries.push({ course, schedule, slotIndex: schedule.startSlot - 1 })
+      }
     }
   }
   return entries
@@ -35,8 +33,10 @@ function handleCellClick(dayOfWeek: number, slotIndex: number) {
   emit('addCourse', dayOfWeek, slotIndex)
 }
 
-function handleEditCourse(course: any) {
-  emit('editCourse', course.id)
+function handleEditCourse(course: Course) {
+  if (course.id) {
+    emit('editCourse', course.id)
+  }
 }
 
 const daySlots = computed(() => {

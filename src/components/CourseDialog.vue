@@ -53,6 +53,11 @@ watch(() => props.visible, (val) => {
         schedules: [{ dayOfWeek: props.defaultDay, startSlot: props.defaultSlot, duration: 2, weekType: 'all' as Schedule['weekType'] }] as Schedule[],
       }
     }
+    for (const s of form.value.schedules) {
+      if (s.weekType === 'custom' && !s.customWeeks) {
+        s.customWeeks = []
+      }
+    }
   }
 })
 

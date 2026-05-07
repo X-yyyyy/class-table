@@ -37,12 +37,14 @@ function applyBackground(url: string) {
     document.documentElement.style.removeProperty('--custom-bg')
     document.body.classList.remove('has-custom-bg')
   }
+  window.dispatchEvent(new Event('settings-updated'))
 }
 
 function handleUpload(e: Event) {
-  const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
   if (!file) return
+  target.value = ''
 
   const reader = new FileReader()
   reader.onload = () => {
@@ -69,7 +71,6 @@ function handleUpload(e: Event) {
     img.src = reader.result as string
   }
   reader.readAsDataURL(file)
-  input.value = ''
 }
 
 function removeBackground() {
@@ -78,26 +79,30 @@ function removeBackground() {
   applyBackground('')
   particleEnabled.value = false
   localStorage.setItem('bgParticle', 'false')
+  window.dispatchEvent(new Event('settings-updated'))
 }
 
 function toggleParticle(val: boolean) {
   particleEnabled.value = val
   localStorage.setItem('bgParticle', val ? 'true' : 'false')
+  window.dispatchEvent(new Event('settings-updated'))
 }
 
 onMounted(async () => {
+  let dark = false
   if (authStore.user) {
     const snap = await getDoc(doc(db, 'users', authStore.user.uid))
     if (snap.exists()) {
-      darkMode.value = !!snap.data()?.settings?.darkMode
+      dark = !!snap.data()?.settings?.darkMode
     }
   }
-  const savedBg = localStorage.getItem('bgImage')
+  applyDarkMode(dark)
+  const savedBg = localStorage.getItem('bgImage') || ''
+  backgroundImage.value = savedBg
+  particleEnabled.value = localStorage.getItem('bgParticle') === 'true' && !!savedBg
   if (savedBg) {
-    backgroundImage.value = savedBg
     applyBackground(savedBg)
   }
-  particleEnabled.value = localStorage.getItem('bgParticle') === 'true'
 })
 </script>
 
@@ -116,12 +121,9 @@ onMounted(async () => {
     <div class="setting-section">
       <h3>自定义背景</h3>
       <div class="setting-row">
-        <el-upload :auto-upload="false" :show-file-list="false" accept="image/*" @change="handleUpload">
-          <template #trigger>
-            <el-button size="small" type="primary">选择图片</el-button>
-          </template>
-        </el-upload>
-        <el-button v-if="backgroundImage" size="small" type="danger" plain @click="removeBackground">
+        <input id="bg-upload" type="file" accept="image/*" @change="handleUpload" />
+        <label for="bg-upload" class="upload-label">选择图片</label>
+        <el-button v-if="backgroundImage" type="danger" @click="removeBackground">
           移除背景
         </el-button>
       </div>
@@ -187,5 +189,28 @@ onMounted(async () => {
   font-size: 12px;
   color: var(--el-text-color-secondary);
   margin-top: 6px;
+}
+#bg-upload {
+  position: fixed;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.upload-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 15px;
+  font-size: 14px;
+  border-radius: 6px;
+  background: var(--el-color-primary);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+  user-select: none;
+}
+.upload-label:hover {
+  background: var(--el-color-primary-light-3);
 }
 </style>

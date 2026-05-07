@@ -1,167 +1,191 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 
-interface Particle {
-  x: number
-  y: number
-  targetX: number
-  targetY: number
-  color: string
-  size: number
-  phase: number
-}
-
 const props = defineProps<{
-  imageSrc: string
-  visible: boolean
+  imageUrl: string
+  enabled: boolean
 }>()
 
-const canvasRef = ref<HTMLCanvasElement>()
-let ctx: CanvasRenderingContext2D | null = null
-let particles: Particle[] = []
-let rafId = 0
-let mouseX = -10000
-let mouseY = -10000
-let time = 0
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+let animationId = 0
+let particlesArray: Particle[] = []
+
+const mouse = {
+  x: -1000,
+  y: -1000,
+  radius: 80,
+}
+
+function handleMouseMove(event: MouseEvent) {
+  mouse.x = event.clientX
+  mouse.y = event.clientY
+}
+
+function handleMouseLeave() {
+  mouse.x = -1000
+  mouse.y = -1000
+}
+
+class Particle {
+  x: number
+  y: number
+  originX: number
+  originY: number
+  color: string
+  size: number
+  vx: number
+  vy: number
+  friction: number
+  ease: number
+
+  constructor(x: number, y: number, color: string) {
+    this.x = window.innerWidth / 2 + (Math.random() - 0.5) * 500
+    this.y = window.innerHeight / 2 + (Math.random() - 0.5) * 500
+    this.originX = x
+    this.originY = y
+    this.color = color
+    this.size = Math.random() * 1.5 + 1
+    this.vx = 0
+    this.vy = 0
+    this.friction = 0.88 + Math.random() * 0.05
+    this.ease = 0.05 + Math.random() * 0.05
+  }
+
+  update() {
+    const dxMouse = mouse.x - this.x
+    const dyMouse = mouse.y - this.y
+    const distanceMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse)
+
+    if (distanceMouse < mouse.radius && distanceMouse > 0) {
+      const forceDirectionX = dxMouse / distanceMouse
+      const forceDirectionY = dyMouse / distanceMouse
+      const force = (mouse.radius - distanceMouse) / mouse.radius
+      this.vx += forceDirectionX * force * -5
+      this.vy += forceDirectionY * force * -5
+    }
+
+    const dxOrigin = this.originX - this.x
+    const dyOrigin = this.originY - this.y
+    this.vx += dxOrigin * this.ease
+    this.vy += dyOrigin * this.ease
+    this.vx *= this.friction
+    this.vy *= this.friction
+    this.x += this.vx
+    this.y += this.vy
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.fillStyle = this.color
+    ctx.fillRect(this.x, this.y, this.size, this.size)
+  }
+}
+
+function clearCanvas() {
+  const canvas = canvasRef.value
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  ctx?.clearRect(0, 0, canvas.width, canvas.height)
+}
 
 function initParticles() {
-  if (!canvasRef.value) return
   const canvas = canvasRef.value
-  canvas.width = window.innerWidth
-  canvas.height = window.innerHeight
+  if (!canvas || !props.enabled || !props.imageUrl) return
 
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  const source = props.imageUrl
   const img = new Image()
-  img.crossOrigin = 'anonymous'
   img.onload = () => {
-    const oc = document.createElement('canvas')
-    const w = Math.min(img.width, canvas.width)
-    const h = Math.min(img.height, canvas.height)
-    oc.width = w
-    oc.height = h
-    const octx = oc.getContext('2d')!
-    octx.drawImage(img, 0, 0, w, h)
-    const imageData = octx.getImageData(0, 0, w, h).data
+    if (!props.enabled || props.imageUrl !== source) return
 
-    const gap = Math.max(2, Math.round(Math.max(w, h) / 120))
-    const newParticles: Particle[] = []
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
 
-    for (let y = 0; y < h; y += gap) {
-      for (let x = 0; x < w; x += gap) {
-        const idx = (y * w + x) * 4
-        const r = imageData[idx]
-        const g = imageData[idx + 1]
-        const b = imageData[idx + 2]
-        const a = imageData[idx + 3]
-        if (a < 128) continue
+    const offCanvas = document.createElement('canvas')
+    const offCtx = offCanvas.getContext('2d')!
 
-        const sx = (x / w) * canvas.width
-        const sy = (y / h) * canvas.height
-        newParticles.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
-          targetX: sx,
-          targetY: sy,
-          color: `rgb(${r},${g},${b})`,
-          size: Math.max(1.5, 3 - gap * 0.02),
-          phase: Math.random() * Math.PI * 2,
-        })
+    const scale = Math.max(canvas.width / img.width, canvas.height / img.height)
+    const w = img.width * scale
+    const h = img.height * scale
+    const dx = (canvas.width - w) / 2
+    const dy = (canvas.height - h) / 2
+
+    offCanvas.width = canvas.width
+    offCanvas.height = canvas.height
+    offCtx.drawImage(img, dx, dy, w, h)
+
+    const imageData = offCtx.getImageData(0, 0, offCanvas.width, offCanvas.height).data
+    const nextParticles: Particle[] = []
+    const step = 9
+
+    for (let y = 0; y < offCanvas.height; y += step) {
+      for (let x = 0; x < offCanvas.width; x += step) {
+        const index = (y * offCanvas.width + x) * 4
+        const alpha = imageData[index + 3]
+
+        if (alpha > 128) {
+          const r = imageData[index]
+          const g = imageData[index + 1]
+          const b = imageData[index + 2]
+          nextParticles.push(new Particle(x, y, `rgb(${r},${g},${b})`))
+        }
       }
     }
-    particles = newParticles
+
+    particlesArray = nextParticles
+    cancelAnimationFrame(animationId)
+    animate()
   }
-  img.src = props.imageSrc
+  img.src = source
 }
 
 function animate() {
-  if (!ctx || !canvasRef.value) return
   const canvas = canvasRef.value
-  time += 0.008
+  if (!canvas || !props.enabled) return
 
+  const ctx = canvas.getContext('2d')!
   ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-  const mRadius = 80
-  const mForce = 6
-
-  for (const p of particles) {
-    let dx = (p.targetX - p.x) * 0.018
-    let dy = (p.targetY - p.y) * 0.018
-
-    dx += Math.sin(time + p.phase) * 0.3
-    dy += Math.cos(time + p.phase * 1.3) * 0.3
-
-    const mx = p.x - mouseX
-    const my = p.y - mouseY
-    const dist = Math.sqrt(mx * mx + my * my)
-    if (dist < mRadius && dist > 0) {
-      const force = (mRadius - dist) / mRadius * mForce
-      dx += (mx / dist) * force
-      dy += (my / dist) * force
-    }
-
-    p.x += dx
-    p.y += dy
-
-    ctx.beginPath()
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
-    ctx.fillStyle = p.color
-    ctx.fill()
+  for (const particle of particlesArray) {
+    particle.update()
+    particle.draw(ctx)
   }
 
-  rafId = requestAnimationFrame(animate)
+  animationId = requestAnimationFrame(animate)
 }
 
-function onMouseMove(e: MouseEvent) {
-  mouseX = e.clientX
-  mouseY = e.clientY
-}
-
-function onResize() {
-  if (!canvasRef.value) return
-  canvasRef.value.width = window.innerWidth
-  canvasRef.value.height = window.innerHeight
-  initParticles()
-}
-
-function start() {
-  if (!canvasRef.value) return
-  ctx = canvasRef.value.getContext('2d')
-  if (!ctx) return
-  initParticles()
-  window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('resize', onResize)
-  rafId = requestAnimationFrame(animate)
-}
-
-function stop() {
-  cancelAnimationFrame(rafId)
-  window.removeEventListener('mousemove', onMouseMove)
-  window.removeEventListener('resize', onResize)
-  particles = []
-}
-
-watch(() => props.visible, (val) => {
-  if (val) start()
-  else stop()
-})
-
-watch(() => props.imageSrc, () => {
-  if (props.visible) {
-    stop()
-    start()
+watch(() => [props.imageUrl, props.enabled], () => {
+  cancelAnimationFrame(animationId)
+  if (props.enabled) {
+    initParticles()
+  } else {
+    clearCanvas()
+    particlesArray = []
   }
 })
+
+function handleResize() {
+  if (props.enabled) initParticles()
+}
 
 onMounted(() => {
-  if (props.visible) start()
+  if (props.enabled) initParticles()
+  window.addEventListener('resize', handleResize)
+  window.addEventListener('mousemove', handleMouseMove)
+  window.addEventListener('mouseout', handleMouseLeave)
 })
 
 onUnmounted(() => {
-  stop()
+  cancelAnimationFrame(animationId)
+  window.removeEventListener('resize', handleResize)
+  window.removeEventListener('mousemove', handleMouseMove)
+  window.removeEventListener('mouseout', handleMouseLeave)
 })
 </script>
 
 <template>
-  <canvas ref="canvasRef" class="particle-canvas" />
+  <canvas ref="canvasRef" class="particle-canvas"></canvas>
 </template>
 
 <style scoped>
@@ -169,9 +193,9 @@ onUnmounted(() => {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
   pointer-events: none;
-  z-index: 9998;
 }
 </style>
