@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getAuth, onAuthStateChanged } from 'firebase/auth'
+import { getAuth } from 'firebase/auth'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -47,13 +47,9 @@ const router = createRouter({
   ],
 })
 
-function getCurrentUser(): Promise<unknown> {
-  return new Promise((resolve) => {
-    const unsub = onAuthStateChanged(getAuth(), (user) => {
-      unsub()
-      resolve(user)
-    })
-  })
+function getCurrentUser() {
+  const auth = getAuth()
+  return auth.authStateReady().then(() => auth.currentUser)
 }
 
 router.beforeEach(async (to, _from, next) => {

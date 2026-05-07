@@ -20,26 +20,26 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = () => !!user.value
 
-  function init() {
-    getRedirectResult(auth).then(async (cred) => {
-      if (cred) {
-        const uid = cred.user.uid
-        const snap = await getDoc(doc(db, 'users', uid))
+  async function init() {
+    try {
+      await getRedirectResult(auth)
+    } catch {}
+    onAuthStateChanged(auth, async (u) => {
+      user.value = u
+      if (u) {
+        const snap = await getDoc(doc(db, 'users', u.uid))
         if (!snap.exists()) {
-          await setDoc(doc(db, 'users', uid), {
-            profile: { name: cred.user.displayName || '', email: cred.user.email, photoURL: cred.user.photoURL || '' },
+          await setDoc(doc(db, 'users', u.uid), {
+            profile: { name: u.displayName || '', email: u.email, photoURL: u.photoURL || '' },
             settings: { themeColor: '#409EFF', darkMode: false, weekStartsOn: 1 },
           })
-          await setDoc(doc(db, `users/${uid}/semester`, 'current'), {
+          await setDoc(doc(db, `users/${u.uid}/semester`, 'current'), {
             name: '2025-2026学年第二学期',
             startDate: new Date('2026-03-01'),
             totalWeeks: 20,
           })
         }
       }
-    }).catch(() => {})
-    onAuthStateChanged(auth, (u) => {
-      user.value = u
       loading.value = false
     })
   }
